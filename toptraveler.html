@@ -1,0 +1,922 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>明台產險-旅人陀螺大挑戰</title>
+    
+    <meta property="og:title" content="明台產險-旅人陀螺大挑戰">
+    <meta property="og:description" content="用陀螺挑戰出國旅行，能減少損失多少錢?">
+    <meta property="og:image" content="https://scontent.ftpe5-1.fna.fbcdn.net/v/t39.30808-6/347810559_584271693689695_7568623355489626044_n.png?_nc_cat=103&ccb=1-7&_nc_sid=6ee11a&_nc_ohc=nbtc8U9LMmMQ7kNvwFJUgcz&_nc_oc=AdqtQ2aaJNsp05BOhWxJE4yVPnfIukegMqwFzymKItP4lVJHjO3brFyx4Dyi7hZdTzs&_nc_zt=23&_nc_ht=scontent.ftpe5-1.fna&_nc_gid=sdCtwc947cOHr7iZ4ofaGw&_nc_ss=7b2a8&oh=00_Af-g5jMYwd6eC58HjmeyUifLrAdoE402v1Ia_oZm8RsQDg&oe=6A24344F">
+    <meta property="og:url" content="https://www.facebook.com/Mingtaiclub?locale=zh_TW">
+    <meta property="og:type" content="website">
+
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.8.49/Tone.js"></script>
+
+    <style>
+        body, html {
+            margin: 0;
+            padding: 0;
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #1a202c;
+            font-family: 'Microsoft JhengHei', sans-serif;
+            touch-action: none; /* Prevent scroll on touch */
+        }
+        #game-canvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+        }
+        .pointer-events-auto {
+            pointer-events: auto;
+        }
+        .spin-anim {
+            animation: spin 2s linear infinite;
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
+        }
+        /* UI Screens */
+        #start-screen, #end-screen {
+            background: rgba(15, 23, 42, 0.95);
+            backdrop-filter: blur(10px);
+        }
+        .brand-text {
+            background: linear-gradient(to right, #ef4444, #3b82f6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="game-canvas"></canvas>
+
+    <div id="game-info" class="absolute inset-0 pointer-events-none hidden z-0">
+        <div class="absolute top-1/2 -translate-y-1/2 left-2 md:left-6 bg-black/60 text-white/90 p-3 md:p-4 rounded-xl backdrop-blur-sm w-[140px] md:w-[220px] shadow-lg border border-white/10">
+            <h3 class="font-black text-blue-300 mb-2 md:mb-3 border-b border-blue-400/30 pb-1 md:pb-2 text-sm md:text-base">🎮 玩法說明</h3>
+            <ul class="list-disc pl-4 space-y-2 text-xs md:text-sm">
+                <li><span class="text-blue-200">拖曳控制</span><br>按住畫面牽引陀螺移動</li>
+                <li><span class="text-red-300">閃避攻擊</span><br>小心風險陀螺，被撞會扣預備金</li>
+                <li><span class="text-green-300">勝利條件</span><br>撐過60秒，或保護900萬不歸零！</li>
+            </ul>
+        </div>
+
+        <div class="absolute top-1/2 -translate-y-1/2 right-2 md:right-6 bg-black/60 text-white/90 p-3 md:p-4 rounded-xl backdrop-blur-sm w-[150px] md:w-[280px] shadow-lg border border-white/10">
+            <h3 class="font-black text-red-400 mb-2 md:mb-3 border-b border-red-400/30 pb-1 md:pb-2 text-sm md:text-base">⚠️ 風險圖鑑 (傷害)</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-x-3 gap-y-1.5 text-[10px] md:text-xs">
+                <div class="flex justify-between items-center"><span class="truncate">☠️ 意外身故</span><span class="text-red-500 font-bold">-900萬</span></div>
+                <div class="flex justify-between items-center"><span class="truncate">🤕 意外傷害</span><span class="text-red-400 font-bold">-90萬</span></div>
+                <div class="flex justify-between items-center"><span class="truncate">🚑 突發疾病</span><span class="text-red-400 font-bold">-36萬</span></div>
+                <div class="flex justify-between items-center"><span class="truncate">❌ 旅程取消</span><span class="text-orange-400 font-bold">-5萬</span></div>
+                <div class="flex justify-between items-center"><span class="truncate">🕒 旅程更改</span><span class="text-orange-400 font-bold">-5萬</span></div>
+                <div class="flex justify-between items-center"><span class="truncate">✈️ 班機延誤</span><span class="text-yellow-400 font-bold">-2.4萬</span></div>
+                <div class="flex justify-between items-center"><span class="truncate">🧳 行李延誤</span><span class="text-yellow-400 font-bold">-6千</span></div>
+                <div class="flex justify-between items-center"><span class="truncate">🎒 行李損失</span><span class="text-yellow-400 font-bold">-6千</span></div>
+                <div class="flex justify-between items-center"><span class="truncate">🛂 文件損失</span><span class="text-gray-300 font-bold">-3千</span></div>
+                <div class="flex justify-between items-center"><span class="truncate">🚆 交通延誤</span><span class="text-gray-300 font-bold">-3千</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="hud" class="ui-layer hidden p-4 justify-between z-10">
+        <div class="flex justify-between items-start w-full">
+            <div class="bg-white/90 p-3 rounded-lg shadow-lg border-l-4 border-blue-500 max-w-xs">
+                <div class="font-bold text-gray-800 text-sm">明台產險 旅人陀螺</div>
+                <div class="text-xl font-black text-blue-600" id="hud-stage">起點(家裡)</div>
+                <div class="text-sm text-gray-600 mt-1">倒數: <span id="hud-time" class="text-red-500 font-bold text-lg">60</span> 秒</div>
+            </div>
+            <div class="bg-white/90 p-3 rounded-lg shadow-lg border-l-4 border-red-500 text-right">
+                <div class="text-sm text-gray-600">旅遊險預備金</div>
+                <div class="text-2xl font-black text-red-600" id="hud-reserve">$9,000,000</div>
+                <div class="text-xs text-gray-500 mt-1">累積損失: <span id="hud-loss">$0</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="start-screen" class="ui-layer pointer-events-auto flex items-center justify-center z-50">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-md w-full mx-4 text-center">
+            <h1 class="text-3xl font-black mb-2 brand-text">明台產險</h1>
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">旅人陀螺大挑戰</h2>
+            
+            <div class="mb-6 flex justify-center">
+                <div class="w-24 h-24 rounded-full border-4 border-gray-200 shadow-inner flex items-center justify-center relative bg-gray-50 spin-anim" id="preview-top">
+                    <span class="text-3xl">🧳</span>
+                </div>
+            </div>
+
+            <div class="space-y-4 text-left">
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">旅行者姓名 (限18字內)</label>
+                    <input type="text" id="player-name" maxlength="18" placeholder="輸入您的名字" class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent outline-none">
+                </div>
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-1">自訂陀螺顏色</label>
+                    <div class="flex items-center space-x-3">
+                        <input type="color" id="player-color" value="#3b82f6" class="h-10 w-20 rounded cursor-pointer border-0 p-0">
+                        <span class="text-sm text-gray-500">點擊左側選擇專屬顏色</span>
+                    </div>
+                </div>
+
+                <div>
+                    <label class="block text-sm font-bold text-gray-700 mb-2">遊戲難度</label>
+                    <div class="flex justify-between space-x-2">
+                        <label class="flex-1 text-center">
+                            <input type="radio" name="difficulty" value="easy" class="peer hidden">
+                            <div class="cursor-pointer py-2 px-4 rounded-lg border border-gray-300 peer-checked:bg-green-500 peer-checked:text-white peer-checked:border-transparent transition-colors text-sm font-bold text-gray-600">簡單</div>
+                        </label>
+                        <label class="flex-1 text-center">
+                            <input type="radio" name="difficulty" value="medium" class="peer hidden" checked>
+                            <div class="cursor-pointer py-2 px-4 rounded-lg border border-gray-300 peer-checked:bg-blue-500 peer-checked:text-white peer-checked:border-transparent transition-colors text-sm font-bold text-gray-600">中等</div>
+                        </label>
+                        <label class="flex-1 text-center">
+                            <input type="radio" name="difficulty" value="hard" class="peer hidden">
+                            <div class="cursor-pointer py-2 px-4 rounded-lg border border-gray-300 peer-checked:bg-red-500 peer-checked:text-white peer-checked:border-transparent transition-colors text-sm font-bold text-gray-600">困難</div>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8">
+                <button id="btn-start" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-6 rounded-lg text-lg transition duration-200 transform hover:scale-105 shadow-lg">
+                    開始旅程！
+                </button>
+            </div>
+            <p class="mt-4 text-xs text-gray-400">撐過60秒或保護好你的900萬預備金！</p>
+        </div>
+    </div>
+
+    <div id="end-screen" class="ui-layer pointer-events-auto flex items-center justify-center z-50 hidden">
+        <div class="bg-white rounded-2xl shadow-2xl p-8 max-w-lg w-full mx-4 text-center">
+            <h1 class="text-3xl font-black mb-2" id="end-title">旅程結束</h1>
+            
+            <div class="py-6 border-y border-gray-200 my-6 relative">
+                <div id="end-difficulty-badge" class="absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-sm font-bold text-white shadow-md flex items-center gap-2 border-2 border-white">
+                    <div id="end-difficulty-icon-css" class="w-4 h-4 rounded-full border border-white/50 shadow-inner spin-anim relative">
+                        <div class="absolute inset-0 m-auto w-2 h-2 bg-white/30 rounded-full"></div>
+                    </div>
+                    <span id="end-difficulty-text"></span>
+                </div>
+
+                <div class="text-gray-500 mb-1 mt-4" id="end-player-name">旅行者</div>
+                <div class="text-lg font-bold text-gray-800 mb-4">這趟旅行您總共損失了：</div>
+                <div class="text-5xl font-black text-red-600 mb-2" id="end-loss">$0</div>
+                <div class="text-sm text-gray-500">剩餘預備金: <span id="end-reserve">$9,000,000</span></div>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <button id="btn-insure" class="bg-red-500 hover:bg-red-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                    🏥 前往投保明台
+                </button>
+                <button id="btn-save" class="bg-green-500 hover:bg-green-600 text-white font-bold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                    💾 另存成績圖
+                </button>
+                <button id="btn-share" class="bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                    分享至 FB
+                </button>
+                <button id="btn-restart" class="bg-gray-700 hover:bg-gray-800 text-white font-bold py-3 px-4 rounded-lg transition duration-200 flex items-center justify-center">
+                    🔄 再次挑戰
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // --- 遊戲設定與資料 ---
+        const CONFIG = {
+            maxTime: 60,
+            initialReserve: 9000000,
+            playerRadius: 25,
+            stages: [
+                { time: 60, name: '起點(家裡)', bgLight: '#451a03', bgDark: '#1c1917', borderColor: '#f59e0b', icon: '🏠' },
+                { time: 45, name: '出發機場', bgLight: '#1e3a8a', bgDark: '#0f172a', borderColor: '#3b82f6', icon: '🛫' },
+                { time: 30, name: '抵達機場', bgLight: '#4c1d95', bgDark: '#171717', borderColor: '#d946ef', icon: '🛬' },
+                { time: 15, name: '地下鐵站', bgLight: '#166534', bgDark: '#18181b', borderColor: '#22c55e', icon: '🚇' },
+                { time: 0,  name: '返回起點(家裡)', bgLight: '#451a03', bgDark: '#1c1917', borderColor: '#f59e0b', icon: '🏠' }
+            ]
+        };
+
+        const ENEMY_TYPES = [
+            { name: '意外傷害', damage: 900000, radius: 30, color: '#dc2626', icon: '🤕', speed: 3 },
+            { name: '海外突發疾病', damage: 360000, radius: 25, color: '#9333ea', icon: '🚑', speed: 3.5 },
+            { name: '旅程取消', damage: 50000, radius: 20, color: '#ea580c', icon: '❌', speed: 4 },
+            { name: '旅程更改', damage: 50000, radius: 20, color: '#ca8a04', icon: '🕒', speed: 4 },
+            { name: '班機延誤', damage: 24000, radius: 15, color: '#0284c7', icon: '✈️', speed: 4.5 },
+            { name: '行李延誤', damage: 6000, radius: 15, color: '#65a30d', icon: '🧳', speed: 4.5 },
+            { name: '行李損失', damage: 6000, radius: 15, color: '#16a34a', icon: '🎒', speed: 4.5 },
+            { name: '旅行文件損失', damage: 3000, radius: 12, color: '#475569', icon: '🛂', speed: 5 },
+            { name: '交通工具延誤', damage: 3000, radius: 12, color: '#57534e', icon: '🚆', speed: 5 }
+        ];
+        
+        const DEATH_ENEMY = { name: '意外身故', damage: 9000000, radius: 45, color: '#000000', icon: '☠️', speed: 2 };
+
+        const DIFFICULTY_CONFIG = {
+            easy: { speedMul: 0.7, lifeSec: 8, name: '簡單', topName: '灰色陀螺', hex: '#6b7280', badgeColor: 'bg-gray-500' },
+            medium: { speedMul: 1.0, lifeSec: 15, name: '中等', topName: '銀色陀螺', hex: '#94a3b8', badgeColor: 'bg-slate-400' },
+            hard: { speedMul: 1.4, lifeSec: 25, name: '困難', topName: '金色陀螺', hex: '#eab308', badgeColor: 'bg-yellow-500' }
+        };
+        let currentDifficultySetting = DIFFICULTY_CONFIG.medium;
+
+        // --- 核心與畫布變數 ---
+        const canvas = document.getElementById('game-canvas');
+        const ctx = canvas.getContext('2d');
+        let width, height; 
+        
+        // 【虛擬世界核心設定】
+        // 競技場中心點固定在虛擬坐標 (0,0)
+        // 為了不讓畫面受限，我們將邊界(八角形外接圓半徑)加大至 1200 像素
+        const VIRTUAL_ARENA_RADIUS = 1200; 
+
+        let gameState = 'start'; // start, playing, end
+        let lastTime = 0;
+        let gameTimer = 0; 
+        let currentReserve = CONFIG.initialReserve;
+        let totalLoss = 0;
+        let screenShake = 0;
+        
+        // 互動控制：改為相對於世界或滑鼠拉力向量
+        let isPointerDown = false;
+        let dragStartX = 0;
+        let dragStartY = 0;
+        let dragCurrentX = 0;
+        let dragCurrentY = 0;
+
+        // 遊戲物件
+        let player = null;
+        let enemies = [];
+        let particles = []; 
+
+        // --- 音效控制器 (Tone.js) ---
+        const GameAudio = {
+            initialized: false,
+            bgmSynth: null,
+            sfxSynth: null,
+            metalSynth: null,
+            bgmLoop: null,
+            init: async function() {
+                if (this.initialized) return;
+                try {
+                    await Tone.start(); 
+
+                    this.bgmSynth = new Tone.FMSynth({
+                        envelope: { attack: 0.01, decay: 0.2, sustain: 0.2, release: 0.5 }
+                    }).toDestination();
+                    this.bgmSynth.volume.value = -15;
+
+                    this.sfxSynth = new Tone.MembraneSynth().toDestination();
+                    this.sfxSynth.volume.value = -5;
+
+                    this.metalSynth = new Tone.MetalSynth({
+                        frequency: 200, envelope: { attack: 0.001, decay: 1, release: 0.2 }
+                    }).toDestination();
+                    this.metalSynth.volume.value = -8;
+
+                    const notes = ["E3", "A3", "C4", "B3"];
+                    let step = 0;
+                    this.bgmLoop = new Tone.Loop((time) => {
+                        this.bgmSynth.triggerAttackRelease(notes[step % notes.length], "8n", time);
+                        step++;
+                    }, "4n");
+                    
+                    Tone.Transport.bpm.value = 140; 
+                    this.initialized = true;
+                } catch(e) {
+                    console.warn("Audio failed to init", e);
+                }
+            },
+            startBGM: function() {
+                if (!this.initialized) return;
+                try {
+                    Tone.Transport.start();
+                    this.bgmLoop.start(0);
+                } catch(e){}
+            },
+            stopBGM: function() {
+                if (!this.initialized) return;
+                try {
+                    this.bgmLoop.stop();
+                    Tone.Transport.stop();
+                } catch(e){}
+            },
+            playHit: function(isFatal) {
+                if (!this.initialized) return;
+                try {
+                    if (isFatal) {
+                        this.metalSynth.triggerAttackRelease("2n"); 
+                    } else {
+                        this.sfxSynth.triggerAttackRelease("C2", "8n");
+                    }
+                } catch(e){}
+            },
+            playEnd: function(reason) {
+                if (!this.initialized) return;
+                try {
+                    const synth = new Tone.Synth().toDestination();
+                    synth.volume.value = -10;
+                    const now = Tone.now();
+                    if (reason === '破產') {
+                        synth.triggerAttackRelease("D4", "8n", now);
+                        synth.triggerAttackRelease("A3", "8n", now + 0.3);
+                        synth.triggerAttackRelease("F3", "8n", now + 0.6);
+                        synth.triggerAttackRelease("D3", "2n", now + 0.9);
+                    } else {
+                        synth.triggerAttackRelease("C4", "8n", now);
+                        synth.triggerAttackRelease("E4", "8n", now + 0.2);
+                        synth.triggerAttackRelease("G4", "8n", now + 0.4);
+                        synth.triggerAttackRelease("C5", "2n", now + 0.6);
+                    }
+                } catch(e){}
+            }
+        };
+
+        // --- 工具函數 ---
+        const formatMoney = (num) => '$' + num.toLocaleString();
+        const getStage = (timeLeft) => {
+            for (let i = 0; i < CONFIG.stages.length; i++) {
+                if (timeLeft >= CONFIG.stages[i].time) return CONFIG.stages[i];
+            }
+            return CONFIG.stages[CONFIG.stages.length - 1];
+        };
+
+        // 【玩家類別】坐標系基於虛擬世界 (以 0,0 為中心)
+        class Player {
+            constructor(name, color) {
+                this.name = name;
+                this.color = color;
+                this.x = 0; 
+                this.y = 0;
+                this.radius = CONFIG.playerRadius;
+                this.maxSpeed = 7;
+                this.angle = 0;
+            }
+            update() {
+                if (isPointerDown) {
+                    // 計算拉力向量
+                    const dx = dragCurrentX - dragStartX;
+                    const dy = dragCurrentY - dragStartY;
+                    const dist = Math.sqrt(dx*dx + dy*dy);
+                    
+                    if (dist > 5) {
+                        // 依拉力距離決定速度百分比，最大拉動 100 像素達到最快速度
+                        const force = Math.min(100, dist) / 100;
+                        const speed = this.maxSpeed * force;
+                        this.x += (dx / dist) * speed;
+                        this.y += (dy / dist) * speed;
+                    }
+                }
+                this.angle += 0.2; // 旋轉動畫
+                this.constrainToArena();
+            }
+            constrainToArena() {
+                // 八角形邊界近似：圓形限制以防止卡牆 (半徑改用虛擬世界尺寸)
+                const distToCenter = Math.sqrt(this.x*this.x + this.y*this.y);
+                const maxDist = VIRTUAL_ARENA_RADIUS * Math.cos(Math.PI / 8) - this.radius;
+                
+                if (distToCenter > maxDist) {
+                    const angle = Math.atan2(this.y, this.x);
+                    this.x = Math.cos(angle) * maxDist;
+                    this.y = Math.sin(angle) * maxDist;
+                }
+            }
+            // 繪製：由於畫布已被反向位移，直接在本身的虛擬座標上繪製即可
+            draw(ctx) {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                
+                // 陀螺外體
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.color;
+                ctx.fill();
+                ctx.lineWidth = 3;
+                ctx.strokeStyle = '#fff';
+                ctx.stroke();
+
+                // 陀螺內圈
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius * 0.6, 0, Math.PI * 2);
+                ctx.fillStyle = 'rgba(255,255,255,0.3)';
+                ctx.fill();
+                
+                // 攻擊鋸齒
+                for(let i=0; i<4; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.radius, 0);
+                    ctx.lineTo(this.radius + 4, 4);
+                    ctx.lineTo(this.radius, -4);
+                    ctx.fillStyle = '#fff';
+                    ctx.fill();
+                    ctx.rotate(Math.PI / 2);
+                }
+                ctx.restore();
+
+                // 名字跟隨
+                ctx.fillStyle = '#fff';
+                ctx.font = 'bold 14px sans-serif';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = 'rgba(0,0,0,0.8)';
+                ctx.shadowBlur = 4;
+                ctx.fillText(this.name, this.x, this.y - this.radius - 8);
+                ctx.shadowBlur = 0;
+            }
+        }
+
+        // 【敵人類別】坐標系基於虛擬世界
+        class Enemy {
+            constructor(typeConfig) {
+                this.type = typeConfig;
+                this.radius = typeConfig.radius;
+                
+                // 從虛擬世界競技場外緣生成
+                const angle = Math.random() * Math.PI * 2;
+                const spawnDist = VIRTUAL_ARENA_RADIUS * 0.9;
+                this.x = Math.cos(angle) * spawnDist;
+                this.y = Math.sin(angle) * spawnDist;
+                
+                // 朝向虛擬中心點發射
+                const angleToCenter = Math.atan2(-this.y, -this.x) + (Math.random() - 0.5) * 0.5;
+                this.vx = Math.cos(angleToCenter) * typeConfig.speed * currentDifficultySetting.speedMul;
+                this.vy = Math.sin(angleToCenter) * typeConfig.speed * currentDifficultySetting.speedMul;
+                this.angle = 0;
+                this.cooldown = 0;
+                this.life = currentDifficultySetting.lifeSec;
+            }
+            update(dt) {
+                this.x += this.vx;
+                this.y += this.vy;
+                this.angle -= 0.15;
+                this.life -= dt;
+                if (this.cooldown > 0) this.cooldown--;
+
+                // 虛擬邊界內碰撞反彈
+                const distToCenter = Math.sqrt(this.x*this.x + this.y*this.y);
+                const maxDist = VIRTUAL_ARENA_RADIUS * Math.cos(Math.PI / 8) - this.radius;
+                if (distToCenter > maxDist) {
+                    const normalAngle = Math.atan2(this.y, this.x);
+                    const dotProduct = this.vx * Math.cos(normalAngle) + this.vy * Math.sin(normalAngle);
+                    this.vx -= 2 * dotProduct * Math.cos(normalAngle);
+                    this.vy -= 2 * dotProduct * Math.sin(normalAngle);
+                    this.x = Math.cos(normalAngle) * maxDist;
+                    this.y = Math.sin(normalAngle) * maxDist;
+                }
+            }
+            draw(ctx) {
+                ctx.save();
+                if (this.life < 1) {
+                    ctx.globalAlpha = Math.max(0, this.life);
+                }
+                ctx.translate(this.x, this.y);
+                
+                ctx.save();
+                ctx.rotate(this.angle);
+                ctx.beginPath();
+                ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+                ctx.fillStyle = this.type.color;
+                ctx.fill();
+                ctx.lineWidth = 2;
+                ctx.strokeStyle = '#ffb703';
+                ctx.stroke();
+                
+                for(let i=0; i<6; i++) {
+                    ctx.beginPath();
+                    ctx.moveTo(this.radius, 0);
+                    ctx.lineTo(this.radius+5, 3);
+                    ctx.lineTo(this.radius, -3);
+                    ctx.fillStyle = '#ffb703';
+                    ctx.fill();
+                    ctx.rotate(Math.PI / 3);
+                }
+                ctx.restore();
+
+                ctx.font = `${this.radius}px sans-serif`;
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(this.type.icon, 0, 0);
+                ctx.restore();
+            }
+        }
+
+        // 漂浮文字物件
+        class FloatingText {
+            constructor(x, y, text) {
+                this.x = x;
+                this.y = y;
+                this.text = text;
+                this.life = 60;
+                this.maxLife = 60;
+            }
+            update() {
+                this.y -= 1;
+                this.life--;
+            }
+            draw(ctx) {
+                ctx.save();
+                ctx.globalAlpha = this.life / this.maxLife;
+                ctx.fillStyle = '#ef4444';
+                ctx.font = 'bold 24px Arial';
+                ctx.textAlign = 'center';
+                ctx.shadowColor = 'white';
+                ctx.shadowBlur = 4;
+                ctx.fillText(this.text, this.x, this.y);
+                ctx.restore();
+            }
+        }
+
+        function resizeCanvas() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+            width = canvas.width;
+            height = canvas.height;
+        }
+
+        // 繪製大型八角形競技場 (x, y 固定傳入 0,0 即可)
+        function drawOctagon(ctx, x, y, radius, borderColor) {
+            ctx.beginPath();
+            for (let i = 0; i < 8; i++) {
+                const angle = (i * Math.PI / 4) + (Math.PI / 8); 
+                const px = x + Math.cos(angle) * radius;
+                const py = y + Math.sin(angle) * radius;
+                if (i === 0) ctx.moveTo(px, py);
+                else ctx.lineTo(px, py);
+            }
+            ctx.closePath();
+            
+            ctx.fillStyle = 'rgba(0,0,0,0.45)'; 
+            ctx.fill();
+            
+            ctx.lineWidth = 8;
+            ctx.strokeStyle = borderColor;
+            ctx.stroke();
+            
+            ctx.save();
+            ctx.shadowBlur = 20;
+            ctx.shadowColor = borderColor;
+            ctx.stroke();
+            ctx.restore();
+        }
+
+        // 繪製背景巨型浮水印 (置中 0,0)
+        function drawWatermark(ctx, currentStage) {
+            ctx.save();
+            ctx.font = 'bold ' + (VIRTUAL_ARENA_RADIUS * 0.4) + 'px sans-serif';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText(currentStage.icon, 0, -50);
+
+            ctx.font = 'bold ' + (VIRTUAL_ARENA_RADIUS * 0.08) + 'px sans-serif';
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.06)';
+            ctx.fillText('明台產險', 0, VIRTUAL_ARENA_RADIUS * 0.15);
+            ctx.font = 'bold ' + (VIRTUAL_ARENA_RADIUS * 0.05) + 'px sans-serif';
+            ctx.fillText('旅人陀螺大挑戰', 0, VIRTUAL_ARENA_RADIUS * 0.26);
+            ctx.restore();
+        }
+
+        function spawnEnemy() {
+            if (Math.random() < 0.01) {
+                enemies.push(new Enemy(DEATH_ENEMY));
+                return;
+            }
+            const type = ENEMY_TYPES[Math.floor(Math.random() * ENEMY_TYPES.length)];
+            enemies.push(new Enemy(type));
+        }
+
+        function checkCollisions() {
+            for (let e of enemies) {
+                if (e.cooldown > 0) continue;
+
+                const dx = player.x - e.x;
+                const dy = player.y - e.y;
+                const dist = Math.sqrt(dx*dx + dy*dy);
+
+                if (dist < player.radius + e.radius) {
+                    screenShake = 15;
+                    e.cooldown = 30;
+                    
+                    const isFatal = e.type.damage >= 9000000;
+                    GameAudio.playHit(isFatal);
+
+                    const angle = Math.atan2(dy, dx);
+                    e.vx = -Math.cos(angle) * e.type.speed * 1.5;
+                    e.vy = -Math.sin(angle) * e.type.speed * 1.5;
+
+                    const dmg = e.type.damage;
+                    currentReserve -= dmg;
+                    totalLoss += dmg;
+                    
+                    particles.push(new FloatingText(player.x, player.y - 30, `-${formatMoney(dmg)}`));
+                    updateHUD();
+
+                    if (currentReserve <= 0) {
+                        currentReserve = 0;
+                        endGame('破產');
+                    }
+                }
+            }
+        }
+
+        function updateHUD() {
+            const timeLeft = Math.max(0, Math.ceil(CONFIG.maxTime - gameTimer));
+            const stage = getStage(timeLeft);
+            
+            document.getElementById('hud-time').innerText = timeLeft;
+            document.getElementById('hud-stage').innerText = stage.name;
+            document.getElementById('hud-reserve').innerText = formatMoney(currentReserve);
+            document.getElementById('hud-loss').innerText = formatMoney(totalLoss);
+        }
+
+        // --- 核心遊戲循環 ---
+        function gameLoop(timestamp) {
+            if (gameState !== 'playing') return;
+
+            const dt = (timestamp - lastTime) / 1000;
+            lastTime = timestamp;
+            gameTimer += dt;
+
+            if (gameTimer >= CONFIG.maxTime) {
+                endGame('通關');
+                return;
+            }
+
+            const timeLeft = Math.max(0, CONFIG.maxTime - gameTimer);
+            const currentStage = getStage(timeLeft);
+
+            ctx.save();
+            
+            // 【關鍵技術：鏡頭移動與反向繪製畫布】
+            // 1. 將畫布中心移至螢幕正中央 (這樣 0,0 就會對齊螢幕中央)
+            ctx.translate(width / 2, height / 2);
+            
+            // 2. 處理震動效果
+            if (screenShake > 0) {
+                ctx.translate((Math.random()-0.5)*12, (Math.random()-0.5)*12);
+                screenShake--;
+            }
+            
+            // 3. 根據玩家的虛擬坐標進行「反向位移」，讓玩家永遠維持在中央！
+            ctx.translate(-player.x, -player.y);
+
+            // 繪製大世界放射狀背景 (中心在 0,0)
+            const gradient = ctx.createRadialGradient(0, 0, VIRTUAL_ARENA_RADIUS * 0.1, 0, 0, VIRTUAL_ARENA_RADIUS * 1.2);
+            gradient.addColorStop(0, currentStage.bgLight);
+            gradient.addColorStop(1, currentStage.bgDark);
+            ctx.fillStyle = gradient;
+            // 填滿整個巨大的虛擬世界外圍
+            ctx.fillRect(-VIRTUAL_ARENA_RADIUS*1.5, -VIRTUAL_ARENA_RADIUS*1.5, VIRTUAL_ARENA_RADIUS*3, VIRTUAL_ARENA_RADIUS*3);
+            
+            // 繪製虛擬世界中的大型八角形邊框與浮水印
+            drawOctagon(ctx, 0, 0, VIRTUAL_ARENA_RADIUS, currentStage.borderColor);
+            drawWatermark(ctx, currentStage);
+
+            // 生成敵人群
+            const spawnRate = Math.max(0.15, 0.8 - (gameTimer / 60) * 0.6);
+            if (Math.random() < dt / spawnRate) {
+                spawnEnemy();
+            }
+
+            // 更新並繪製玩家陀螺
+            player.update();
+            player.draw(ctx);
+
+            // 更新與繪製風險敵人
+            for (let i = enemies.length - 1; i >= 0; i--) {
+                enemies[i].update(dt);
+                if (enemies[i].life <= 0) {
+                    enemies.splice(i, 1);
+                } else {
+                    enemies[i].draw(ctx);
+                }
+            }
+
+            // 更新與繪製跳字特效
+            for (let i = particles.length - 1; i >= 0; i--) {
+                particles[i].update();
+                particles[i].draw(ctx);
+                if (particles[i].life <= 0) particles.splice(i, 1);
+            }
+
+            checkCollisions();
+            
+            if (Math.floor(gameTimer) > Math.floor(gameTimer - dt)) {
+                updateHUD();
+            }
+
+            ctx.restore();
+            
+            // 繪製操作指示虛線 (如果是拖曳中，在真實螢幕上提供動態回饋)
+            if (isPointerDown) {
+                ctx.save();
+                ctx.beginPath();
+                ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+                ctx.lineWidth = 2;
+                ctx.setLineDash([4, 4]);
+                ctx.moveTo(dragStartX, dragStartY);
+                ctx.lineTo(dragCurrentX, dragCurrentY);
+                ctx.stroke();
+                
+                // 搖桿外圈
+                ctx.beginPath();
+                ctx.arc(dragStartX, dragStartY, 40, 0, Math.PI*2);
+                ctx.stroke();
+                ctx.restore();
+            }
+
+            requestAnimationFrame(gameLoop);
+        }
+
+        async function startGame() {
+            await GameAudio.init();
+
+            const nameInput = document.getElementById('player-name').value.trim() || '無名旅行者';
+            const colorInput = document.getElementById('player-color').value;
+            const diffValue = document.querySelector('input[name="difficulty"]:checked').value;
+            currentDifficultySetting = DIFFICULTY_CONFIG[diffValue];
+            
+            player = new Player(nameInput, colorInput);
+            enemies = [];
+            particles = [];
+            gameTimer = 0;
+            currentReserve = CONFIG.initialReserve;
+            totalLoss = 0;
+            lastTime = performance.now();
+            gameState = 'playing';
+
+            document.getElementById('start-screen').classList.add('hidden');
+            document.getElementById('end-screen').classList.add('hidden');
+            document.getElementById('hud').classList.remove('hidden');
+            document.getElementById('game-info').classList.remove('hidden');
+
+            GameAudio.startBGM();
+            updateHUD();
+            requestAnimationFrame(gameLoop);
+        }
+
+        function endGame(reason) {
+            gameState = 'end';
+            
+            GameAudio.stopBGM();
+            GameAudio.playEnd(reason);
+
+            document.getElementById('hud').classList.add('hidden');
+            document.getElementById('game-info').classList.add('hidden');
+            
+            const endScreen = document.getElementById('end-screen');
+            endScreen.classList.remove('hidden');
+
+            document.getElementById('end-title').innerText = reason === '破產' ? '旅程破產！' : '旅程結束！';
+            document.getElementById('end-title').className = reason === '破產' ? 'text-3xl font-black mb-2 text-red-600' : 'text-3xl font-black mb-2 text-green-600';
+            
+            const badge = document.getElementById('end-difficulty-badge');
+            badge.className = `absolute -top-4 left-1/2 -translate-x-1/2 px-4 py-1 rounded-full text-sm font-bold text-white shadow-md flex items-center gap-2 border-2 border-white ${currentDifficultySetting.badgeColor}`;
+            document.getElementById('end-difficulty-icon-css').style.backgroundColor = currentDifficultySetting.hex;
+            document.getElementById('end-difficulty-text').innerText = `${currentDifficultySetting.topName} (${currentDifficultySetting.name})`;
+
+            document.getElementById('end-player-name').innerText = `旅行者：${player.name}`;
+            document.getElementById('end-loss').innerText = formatMoney(totalLoss);
+            document.getElementById('end-reserve').innerText = formatMoney(currentReserve);
+        }
+
+        function downloadScreenshot() {
+            const offCanvas = document.createElement('canvas');
+            const oCtx = offCanvas.getContext('2d');
+            offCanvas.width = 800;
+            offCanvas.height = 600;
+
+            oCtx.fillStyle = '#0f172a';
+            oCtx.fillRect(0, 0, 800, 600);
+            
+            // 繪製背景裝飾線
+            oCtx.beginPath();
+            for (let i = 0; i < 8; i++) {
+                const angle = (i * Math.PI / 4) + (Math.PI / 8); 
+                const px = 400 + Math.cos(angle) * 230;
+                const py = 350 + Math.sin(angle) * 230;
+                if (i === 0) oCtx.moveTo(px, py);
+                else oCtx.lineTo(px, py);
+            }
+            oCtx.closePath();
+            oCtx.strokeStyle = 'rgba(255,255,255,0.05)';
+            oCtx.lineWidth = 5;
+            oCtx.stroke();
+
+            oCtx.textAlign = 'center';
+            oCtx.fillStyle = '#fff';
+            oCtx.font = 'bold 40px sans-serif';
+            oCtx.fillText('明台產險 - 旅人陀螺大挑戰', 400, 80);
+            
+            oCtx.font = '30px sans-serif';
+            oCtx.fillStyle = '#cbd5e1';
+            oCtx.fillText(`旅行者: ${player.name}`, 400, 150);
+            
+            oCtx.font = 'bold 22px sans-serif';
+            oCtx.fillStyle = currentDifficultySetting.hex;
+            oCtx.fillText(`挑戰難度: ${currentDifficultySetting.topName} (${currentDifficultySetting.name})`, 400, 190);
+
+            oCtx.font = 'bold 50px sans-serif';
+            oCtx.fillStyle = '#ef4444';
+            oCtx.fillText(`總損失金額: ${formatMoney(totalLoss)}`, 400, 260);
+
+            oCtx.font = '24px sans-serif';
+            oCtx.fillStyle = '#3b82f6';
+            oCtx.fillText(`剩餘預備金: ${formatMoney(currentReserve)}`, 400, 330);
+
+            // 繪製靜態陀螺預覽
+            oCtx.save();
+            oCtx.translate(400, 460); 
+            oCtx.scale(2, 2);
+            const tempPlayer = new Player('', player.color);
+            tempPlayer.draw(oCtx);
+            oCtx.restore();
+
+            const link = document.createElement('a');
+            link.download = `明台產險_旅人陀螺_${player.name}成績.png`;
+            link.href = offCanvas.toDataURL('image/png');
+            link.click();
+        }
+
+        window.addEventListener('resize', resizeCanvas);
+        
+        // --- 核心觸控/滑鼠操作 (虛擬搖桿式拉力設計) ---
+        const handlePointerStart = (e) => {
+            isPointerDown = true;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            dragStartX = clientX;
+            dragStartY = clientY;
+            dragCurrentX = clientX;
+            dragCurrentY = clientY;
+        };
+
+        const handlePointerMove = (e) => {
+            if (!isPointerDown) return;
+            const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+            const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+            dragCurrentX = clientX;
+            dragCurrentY = clientY;
+        };
+
+        window.addEventListener('mousedown', handlePointerStart);
+        window.addEventListener('mousemove', handlePointerMove);
+        window.addEventListener('mouseup', () => { isPointerDown = false; });
+        
+        window.addEventListener('touchstart', handlePointerStart, {passive: false});
+        window.addEventListener('touchmove', handlePointerMove, {passive: false});
+        window.addEventListener('touchend', () => { isPointerDown = false; });
+
+        document.getElementById('player-color').addEventListener('input', (e) => {
+            document.getElementById('preview-top').style.borderColor = e.target.value;
+            document.getElementById('preview-top').style.backgroundColor = e.target.value + '33'; 
+        });
+
+        document.getElementById('btn-start').addEventListener('click', startGame);
+        
+        document.getElementById('btn-insure').addEventListener('click', () => {
+            window.open('https://www.mingtai.com.tw/', '_blank');
+        });
+        
+        document.getElementById('btn-save').addEventListener('click', downloadScreenshot);
+        
+        document.getElementById('btn-share').addEventListener('click', () => {
+            const url = encodeURIComponent(window.location.href);
+            window.open(`https://www.facebook.com/sharer/sharer.php?u=${url}`, '_blank', 'width=600,height=400');
+        });
+
+        document.getElementById('btn-restart').addEventListener('click', () => {
+            document.getElementById('end-screen').classList.add('hidden');
+            document.getElementById('start-screen').classList.remove('hidden');
+            
+            // 回到首頁重置背景與預覽畫面
+            ctx.fillStyle = '#1a202c';
+            ctx.fillRect(0, 0, width, height);
+            ctx.save();
+            ctx.translate(width/2, height/2);
+            drawOctagon(ctx, 0, 0, Math.min(width, height)*0.4, '#3b82f6');
+            ctx.restore();
+        });
+
+        // 初始載入設定
+        resizeCanvas();
+        ctx.fillStyle = '#1a202c';
+        ctx.fillRect(0, 0, width, height);
+        ctx.save();
+        ctx.translate(width/2, height/2);
+        drawOctagon(ctx, 0, 0, Math.min(width, height)*0.4, '#3b82f6');
+        ctx.restore();
+
+    </script>
+</body>
+</html>
